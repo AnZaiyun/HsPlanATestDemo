@@ -1,4 +1,6 @@
 import smtplib
+import tkinter.filedialog
+import xlrd
 from email.mime.text import MIMEText  # 邮件内容-文本
 from email.header import Header
 from email.utils import parseaddr, formataddr  # 分解、格式化地址
@@ -7,24 +9,32 @@ from fileinput import filename
 from email.mime.base import MIMEBase
 from email import encoders
 
+
+
 # 格式名称和地址
 def _format_addr(s):
     name, addr = parseaddr(s)
     return formataddr((Header(name, 'utf-8').encode(), addr))
 
- # 服务器名称
-mail_host = 'mail.hundsun.com'
-# 邮箱登录名，注意不是邮箱地址
-mail_user = 'wangnn23480'
-# 邮箱密码
-mail_pwd = 'E21414058tae,'
-# 发件人
-sender = 'wangnn23480@hundsun.com'
-# 收件人
-receivers = ['wangnn23480@hundsun.com']
-# 抄送人
-copyers = ['wangnn23480@hundsun.com']
+filename = tkinter.filedialog.askopenfilename(filetypes=[('xls','.xls')])
+data = xlrd.open_workbook(filename)
+sheet1 = data.sheet_by_index(0)
 
+
+ # 服务器名称
+mail_host = sheet1.cell(0,1).value
+# 邮箱登录名，注意不是邮箱地址
+mail_user = sheet1.cell(1,1).value
+# 邮箱密码
+mail_pwd = sheet1.cell(2,1).value
+# 发件人
+sender = sheet1.cell(3,1).value
+# 收件人
+receivers = sheet1.cell(4,1).value.split(',')
+# 抄送人
+copyers = sheet1.cell(5,1).value.split(',')
+
+print(mail_host+mail_user+mail_pwd+sender+str(receivers))
 # 邮件主体
 msgmultipart = MIMEMultipart()
 
