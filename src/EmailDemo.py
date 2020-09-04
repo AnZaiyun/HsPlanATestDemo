@@ -2,6 +2,8 @@ import smtplib
 import tkinter.filedialog
 import openpyxl
 import LoggingDemo
+import os
+import sys
 from email.mime.text import MIMEText  # 邮件内容-文本
 from email.mime.image import MIMEImage
 from email.header import Header
@@ -48,6 +50,14 @@ log.debug("处理邮件正文图片信息")
 # 拼接图片
 pic_addr1 = 'demo01.png'
 pic_addr2 = 'demo02.png'
+
+if not os.path.exists(os.getcwd() + "/" + pic_addr1):
+    log.debug("未找到图片：" + pic_addr1)
+    sys.exit()
+
+if not os.path.exists(os.getcwd() + "/" + pic_addr2):
+    log.debug("未找到图片：" + pic_addr2)
+    sys.exit()
 
 with open(pic_addr1, 'rb') as f:
     mime = MIMEBase('image', 'png', filename='demo01.png')
