@@ -1,3 +1,7 @@
+'''
+自定义日志类
+'''
+
 import logging
 import os
 import time
@@ -27,7 +31,9 @@ class LoggingFactory:
     def getLogger(self):
         return self.__logger
 
-    # 设置控制台和文件的日志输出等级
+    '''
+    设置控制台和文件的日志输出等级
+    '''
     def setLoggingLevel(self,consulLevel = 'DEBUG', fileLevel = 'DEBUG'):
         consulLevel = consulLevel.upper()
         fileLevel = fileLevel.upper()
@@ -43,9 +49,11 @@ class LoggingFactory:
     def __setfileLevel(self,fileLevel):
         self.__fileLevel = fileLevel
 
-    # 设置log输出格式等属性
+    '''
+    设置log输出格式等属性
+    '''
     def __setLoggingConfig(self,consulLevel, fileLevel):
-        logging.basicConfig(level=consulLevel,format='%(asctime)s - %(filename)s[line:%(lineno)d] - %(levelname)s: %(message)s')
+        logging.basicConfig(level=consulLevel, format='%(asctime)s - %(filename)s[line:%(lineno)d] - %(levelname)s: %(message)s')
 
         # 获取当前文件目录，log文件保存在当前目录下
         log_path = os.path.dirname(os.getcwd()) + '/Logs/'
