@@ -4,7 +4,7 @@ socket连接客户端
 from socket import socket,AF_INET,SOCK_STREAM
 
 HOST = '127.0.0.1' # or 'localhost'
-PORT = 18001
+PORT = 8088
 BUFSIZ =1024
 ADDR = (HOST,PORT)
 
