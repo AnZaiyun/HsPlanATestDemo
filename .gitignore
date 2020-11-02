@@ -1,0 +1,6 @@
+.idea
+*.spec
+**/SocketTest/build/*
+**/SocketTest/dist/*
+venv/*
+*.log
