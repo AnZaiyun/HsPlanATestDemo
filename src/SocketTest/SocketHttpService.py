@@ -1,5 +1,6 @@
 from socket import *
 from src.SocketTest.LoggingDemo import LoggingFactory
+from src.Rabbitmq import ProviderFanout
 import re
 import json
 from threading import Thread
@@ -15,6 +16,12 @@ response_content ='''
 HTTP/1.1 200 ok
 Content-Type: application/json;charset=UTF-8
 Content-Language: zh-CN
+Access-Control-Allow-Credentials: true
+Access-Control-Allow-Headers: x-msg-timeout,X-Msg-Trace,csrfcheck,Shardinglnfo,Partition,broker_key,X-Original-URI,X-Request-Method,Authorization,access_token,login_account,auth_password,user_type,tenant_id,auth_code,Origin,No-Cache, X-Requested-With, lf-Modified-Since,Pragma, Last-Modified, Cache-Control, Expires,Content-Type,X-E4M-With
+Access-Control-Allow-Methods: POST,OPTIONS,GET
+Access-Control-Allow-Origin: *
+Access-Control-Max-Age: 3600
+Connection: keep-alive
 Content-Length: {0}
 
 {1}
@@ -43,7 +50,7 @@ def accept_httprequest():
         log.debug('接收连接:' + str(addr))
         tcpCliSocketPool.append(tcpCliSocket)  # 加入连接池
         thread = Thread(target=message_handle,args=(tcpCliSocket,))  # 给每一个连接创建单独的线程
-        thread.setDaemon(True)  # 设置成守护线程
+        thread.setDaemon(True)  # 设置成守护线程，与主线程生命周期相同
         thread.start()
 
 def message_handle(tcpCliSocket):
@@ -66,7 +73,8 @@ def message_handle(tcpCliSocket):
         data = data.decode('utf-8')
         log.debug('全部请求信息：\r\n' + data)
         if data.find('POST') >= 0:
-            pattern = re.compile(r'func_name[^\w]+(\w+)[^\w]+func_args[^\w]+(\w+)')
+            # 这里使用正则表达式解析请求体，目前这种方案为临时方案
+            pattern = re.compile(r'func_\w+[^\w]+(\w+)[^\w]+func_\w+[^\w]+(\w+)')
             params = re.search(pattern, data)
             if params:
                 try:
@@ -75,6 +83,8 @@ def message_handle(tcpCliSocket):
                     log.debug('请求参数如下：\r\n' + "func_name:" + func_name + "\r\nfunc_args:" + func_args)
                     func = {"func_name": func_name,
                             "func_args": func_args}
+                    # 向mq中添加信息
+                    # ProviderFanout.pushMq(func)
                     func = json.dumps(func)
                     funcLength = len(str(func).encode())
                     tcpCliSocket.send(response_content.format(funcLength,func).encode())
