@@ -1,6 +1,7 @@
 from socket import *
 from src.SocketTest.LoggingDemo import LoggingFactory
 import re
+import json
 from threading import Thread
 
 HOST = ''
@@ -8,20 +9,15 @@ PORT = 8088
 BUFSIZ = 1024
 ADDR = (HOST, PORT)
 
+#响应头与响应体需要有空行
+#返回数据需要指定Content-Length，不然请求会一直等待获取数据
 response_content ='''
 HTTP/1.1 200 ok
-Content-Type: text/html
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-</head>
-<body>
-    {0}
-</body>
-</html>
+Content-Type: application/json;charset=UTF-8
+Content-Language: zh-CN
+Content-Length: {0}
+
+{1}
 '''
 
 def init():
@@ -77,20 +73,22 @@ def message_handle(tcpCliSocket):
                     func_name = params.group(1)
                     func_args = params.group(2)
                     log.debug('请求参数如下：\r\n' + "func_name:" + func_name + "\r\nfunc_args:" + func_args)
-                    tcpCliSocket.send(response_content.format(func_name).encode())
+                    func = {"func_name": func_name,
+                            "func_args": func_args}
+                    func = json.dumps(func)
+                    funcLength = len(str(func).encode())
+                    tcpCliSocket.send(response_content.format(funcLength,func).encode())
                 except Exception as ex:
-                    log.warning('解析参数出错')
+                    log.warning('请求参数不存在，请检查入参名func_name，func_args与格式json')
             else:
-                log.debug('当前请求未传递参数')
-                try:
-                    tcpCliSocket.send(response_content.format("当前请求未传递参数").encode())
-                except Exception:
-                    tcpCliSocket.send(response_content.encode())
-                    log.warning('返回数据出错')
+                result = '当前请求未传递参数'
+                log.debug(result)
+                tcpCliSocket.send(response_content.format(len(result.encode()), result).encode())
         else:
-            log.debug('非post请求')
-            # tcpCliSocket.send("index_content".encode())
-            tcpCliSocket.sendall(response_content.format("非post请求").encode())
+            # 返回长度以字节数计算
+            result = "非post请求"
+            log.debug(result)
+            tcpCliSocket.send(response_content.format(len(result.encode()),result).encode())
 
 
 
