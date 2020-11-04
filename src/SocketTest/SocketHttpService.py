@@ -1,7 +1,7 @@
 from socket import *
 from src.SocketTest.LoggingDemo import LoggingFactory
 from src.Rabbitmq import ProviderFanout
-import re
+import traceback
 import json
 from threading import Thread
 
@@ -73,25 +73,19 @@ def message_handle(tcpCliSocket):
         data = data.decode('utf-8')
         log.debug('全部请求信息：\r\n' + data)
         if data.find('POST') >= 0:
-            # 这里使用正则表达式解析请求体，目前这种方案为临时方案
-            pattern = re.compile(r'func_\w+[^\w]+(\w+)[^\w]+func_\w+[^\w]+(\w+)')
-            params = re.search(pattern, data)
-            if params:
+            paramDict = getParam(data)
+            if "func_name" in paramDict.keys() or "func_args" in paramDict.keys():
                 try:
-                    func_name = params.group(1)
-                    func_args = params.group(2)
-                    log.debug('请求参数如下：\r\n' + "func_name:" + func_name + "\r\nfunc_args:" + func_args)
-                    func = {"func_name": func_name,
-                            "func_args": func_args}
-                    # 向mq中添加信息
-                    # ProviderFanout.pushMq(func)
-                    func = json.dumps(func)
+                    func = json.dumps(paramDict)
                     funcLength = len(str(func).encode())
-                    tcpCliSocket.send(response_content.format(funcLength,func).encode())
+                    log.debug("已接收参数："+str(paramDict))
+                    tcpCliSocket.send(response_content.format(funcLength, func).encode())
                 except Exception as ex:
-                    log.warning('请求参数不存在，请检查入参名func_name，func_args与格式json')
+                    log.error('参数发送时报错:'+traceback.format_exc())
+                finally:
+                    log.debug('等待连接中。。。')
             else:
-                result = '当前请求未传递参数'
+                result = '当前请求未传递参数func_name，func_args'
                 log.debug(result)
                 tcpCliSocket.send(response_content.format(len(result.encode()), result).encode())
         else:
@@ -100,7 +94,31 @@ def message_handle(tcpCliSocket):
             log.debug(result)
             tcpCliSocket.send(response_content.format(len(result.encode()),result).encode())
 
+def getParam(data):
+    '''
+    传参的格式必须严格限制为以下样式
+    {
+        "func_name": "func_args22222",
+        "func_args": "[1,2,3,4,5]"
 
+    }
+    key和value均需要用双引号，参数值不可有多余空格，参数体内不可有多余空行
+    '''
+    paramDict = dict()
+    try:
+        tmpParams = data.split("\r\n\r\n")[-1]  # 截取请求头和正文，只取正文信息
+        tmpParams = tmpParams.replace("\r\n", "")  # 删除多余的换行符
+        tmpParams = tmpParams.replace(" ", "").replace("{", "").replace("}", "")  # 删除多余的符号
+        tmpParams = tmpParams[1:len(tmpParams) - 1]  # 截取头尾的双引号
+        tmpParams = tmpParams.split("\",\"")  # 根据","将参数分组
+
+        for i in tmpParams:
+            param = i.split("\":\"")
+            paramDict[param[0]] = param[1]  # 根据":"将每个参数的参数名和参数值分组
+    except:
+        log.error('解析参数时报错:' + traceback.format_exc())
+    finally:
+        return paramDict
 
 log = LoggingFactory().getLogger()
 tcpCliSocketPool = []  # 连接池
