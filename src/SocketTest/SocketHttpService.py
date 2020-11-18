@@ -76,23 +76,28 @@ def message_handle(tcpCliSocket):
             paramDict = getParam(data)
             if "func_name" in paramDict.keys() or "func_args" in paramDict.keys():
                 try:
-                    func = json.dumps(paramDict)
-                    funcLength = len(str(func).encode())
                     log.debug("已接收参数："+str(paramDict))
+                    func, funcLength = getReturnData(0, 'sucess', paramDict)
+                    # TODO 参数解析以及调用其他函数处理的过程在这里编写，func是返回给前台的数据封装，实际返回的数据是字典resultData
+                    # func只是为了将返回数据的格式封装为json
                     tcpCliSocket.send(response_content.format(funcLength, func).encode())
                 except Exception as ex:
-                    log.error('参数发送时报错:'+traceback.format_exc())
+                    func,funcLength = getReturnData(-1,traceback.format_exc(),None)
+                    tcpCliSocket.send(response_content.format(funcLength, func).encode())
+                    log.error('参数发送时报错:'+func)
                 finally:
                     log.debug('等待连接中。。。')
             else:
                 result = '当前请求未传递参数func_name，func_args'
                 log.debug(result)
-                tcpCliSocket.send(response_content.format(len(result.encode()), result).encode())
+                func, funcLength = getReturnData(-1, result, None)
+                tcpCliSocket.send(response_content.format(funcLength, func).encode())
         else:
             # 返回长度以字节数计算
             result = "非post请求"
             log.debug(result)
-            tcpCliSocket.send(response_content.format(len(result.encode()),result).encode())
+            func, funcLength = getReturnData(-1, result, None)
+            tcpCliSocket.send(response_content.format(funcLength, func).encode())
 
 def getParam(data):
     '''
@@ -100,7 +105,6 @@ def getParam(data):
     {
         "func_name": "func_args22222",
         "func_args": "[1,2,3,4,5]"
-
     }
     key和value均需要用双引号，参数值不可有多余空格，参数体内不可有多余空行
     '''
@@ -120,11 +124,31 @@ def getParam(data):
     finally:
         return paramDict
 
+def getReturnData(rcode,rstr,rdata):
+    '''
+    对传进来的数据进行二次封装，转换成json格式，返回前台
+    :param rcode:
+    :param rstr:
+    :param rdata:
+    :return:
+    '''
+    resultData['return_code'] = rcode
+    resultData['return_str'] = rstr
+    resultData['return_data'] = rdata
+    func = json.dumps(resultData)
+    funcLength = len(str(func).encode())
+    return func,funcLength
+
 log = LoggingFactory().getLogger()
 tcpCliSocketPool = []  # 连接池
 
 if __name__=='__main__':
     init()
+    # 返回数据的二次封装
+    # return_code 0代表成功，小于0代表失败
+    # return_str 该字段不做严格要求，成功时可以填写处理成功的函数或过程名，失败时可以填写失败信息
+    # return_data 函数执行成功后返回的数据
+    resultData = {'return_code':0,'return_str':'sucess','return_data':None}
     thread = Thread(target=accept_httprequest())
     thread.setDaemon(True)
     thread.start()
